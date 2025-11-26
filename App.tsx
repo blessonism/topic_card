@@ -13,8 +13,8 @@ const App: React.FC = () => {
   const [isFlipped, setIsFlipped] = useState(false);
   
   const [history, setHistory] = useState<TopicCardData[]>([]);
-  // Filter only user-generated cards for the specific "My Collection" deck
-  const userCards = history.filter(c => c.isUserGenerated);
+  // Favorites / My Deck state
+  const [favorites, setFavorites] = useState<TopicCardData[]>([]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCustomInputOpen, setIsCustomInputOpen] = useState(false);
@@ -38,6 +38,18 @@ const App: React.FC = () => {
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
+  // Helper to add card to favorites (prevent duplicates)
+  const addToFavorites = (card: TopicCardData) => {
+    setFavorites(prev => {
+        if (prev.some(c => c.timestamp === card.timestamp)) return prev;
+        return [card, ...prev];
+    });
+  };
+
+  const removeFromFavorites = (timestamp: number) => {
+    setFavorites(prev => prev.filter(c => c.timestamp !== timestamp));
+  };
+
   const handleDraw = useCallback(async () => {
     if (generationState.isLoading) return;
 
@@ -57,16 +69,16 @@ const App: React.FC = () => {
       if (currentCategory === TopicCategory.MY_COLLECTION) {
           await new Promise(r => setTimeout(r, 800)); // Simulate suspense
           
-          if (userCards.length > 0) {
-             // Pick random card from user collection
-             const randomIndex = Math.floor(Math.random() * userCards.length);
-             data = userCards[randomIndex];
+          if (favorites.length > 0) {
+             // Pick random card from curated favorites
+             const randomIndex = Math.floor(Math.random() * favorites.length);
+             data = favorites[randomIndex];
           } else {
              // Empty State Card
              data = {
                  title: "空空如也",
-                 description: "你的收藏集还在沉睡。",
-                 question: "去右上角【铸造卡片】，创造属于你的第一张灵感卡片吧。",
+                 description: "你的牌组需要灵魂。",
+                 question: "从历史记录中拖拽卡片到【我的收藏】，或者铸造新卡片来构建你的专属牌组。",
                  tags: ["System", "Guide"],
                  intensity: 1,
                  timestamp: Date.now(),
@@ -76,7 +88,7 @@ const App: React.FC = () => {
       } else {
           // AI Generation
           data = await generateTopic(currentCategory);
-          // Only add AI cards to history (User cards are added upon creation)
+          // Only add AI cards to history
           setHistory(prev => [...prev, data]);
       }
       
@@ -87,7 +99,7 @@ const App: React.FC = () => {
     } finally {
       setGenerationState({ isLoading: false, error: null });
     }
-  }, [currentCategory, isFlipped, generationState.isLoading, userCards]);
+  }, [currentCategory, isFlipped, generationState.isLoading, favorites]);
 
   const handleCategoryChange = (cat: TopicCategory) => {
     if (generationState.isLoading) return;
@@ -115,16 +127,13 @@ const App: React.FC = () => {
     
     // 3. Simulate magical minting process
     setTimeout(() => {
-        // Save to global history (which populates MY_COLLECTION)
+        // Add to global history
         setHistory(prev => [...prev, data]);
+        // Also add to Favorites/Collection automatically for custom cards
+        addToFavorites(data);
         
         // Strategy: Immediate Gratification. 
-        // Show the card immediately regardless of current category.
         setCardData(data);
-        
-        // Optional: Switch category to Collection so next draw is also from collection?
-        // Let's keep current category to allow user to easily go back to AI, 
-        // but the current view is their creation.
         
         setGenerationState({ isLoading: false, error: null });
     }, 1200);
@@ -193,7 +202,7 @@ const App: React.FC = () => {
                {/* === Stack Layer 3 (Bottom - Fanned Left) === */}
                <div 
                  className={`absolute inset-0 w-full h-full rounded-3xl transition-all duration-700 ease-in-out border z-0
-                    dark:bg-[#1a1a1a] dark:border-white/10
+                    dark:bg-[#181818] dark:border-white/10
                     bg-[#e6e6e6] border-black/5 origin-bottom-left
                     ${generationState.isLoading 
                         ? 'translate-y-3 scale-90 opacity-20 rotate-0' 
@@ -205,7 +214,7 @@ const App: React.FC = () => {
                {/* === Stack Layer 2 (Middle - Fanned Right) === */}
                <div 
                  className={`absolute inset-0 w-full h-full rounded-3xl transition-all duration-700 ease-in-out border shadow-lg z-10
-                    dark:bg-gradient-to-br dark:from-[#111] dark:via-[#0a0a0a] dark:to-[#050505] dark:border-white/10
+                    dark:bg-gradient-to-br dark:from-[#222] dark:via-[#151515] dark:to-[#111] dark:border-white/10
                     bg-gradient-to-br from-[#fcfcfc] via-[#f5f5f7] to-[#e6e6e6] border-black/5 origin-bottom-right
                     ${generationState.isLoading 
                         ? 'translate-y-1 scale-95 opacity-50 rotate-0' 
@@ -288,7 +297,10 @@ const App: React.FC = () => {
         isOpen={isDrawerOpen} 
         onClose={() => setIsDrawerOpen(false)} 
         onOpenCustomCreator={() => setIsCustomInputOpen(true)}
-        history={history} 
+        history={history}
+        favorites={favorites}
+        onAddToFavorites={addToFavorites}
+        onRemoveFromFavorites={removeFromFavorites}
       />
       
       <CustomTopicInput 

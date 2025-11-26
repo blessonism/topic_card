@@ -1,15 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TopicCardData } from '../types';
-import { XIcon, SparklesIcon, PenIcon } from './Icons';
+import { XIcon, SparklesIcon, PenIcon, StarIcon, TrashIcon } from './Icons';
 
 interface HistoryDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenCustomCreator: () => void;
   history: TopicCardData[];
+  favorites: TopicCardData[];
+  onAddToFavorites: (card: TopicCardData) => void;
+  onRemoveFromFavorites: (timestamp: number) => void;
 }
 
-export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({ isOpen, onClose, onOpenCustomCreator, history }) => {
+export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({ 
+    isOpen, onClose, onOpenCustomCreator, history, favorites, onAddToFavorites, onRemoveFromFavorites 
+}) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent, card: TopicCardData) => {
+    // We send the JSON string of the card data
+    e.dataTransfer.setData("application/json", JSON.stringify(card));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const data = e.dataTransfer.getData("application/json");
+    if (data) {
+        try {
+            const card = JSON.parse(data) as TopicCardData;
+            onAddToFavorites(card);
+        } catch (err) {
+            console.error("Failed to parse dropped item", err);
+        }
+    }
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -47,7 +75,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({ isOpen, onClose, o
             <div className="flex-1 overflow-y-auto relative z-10 custom-scrollbar">
                 
                 {/* Section: Create */}
-                <div className="p-6 pb-2">
+                <div className="px-6 pt-6 pb-2">
                     <button
                         onClick={() => {
                             onClose();
@@ -71,14 +99,54 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({ isOpen, onClose, o
                     </button>
                 </div>
 
+                {/* Section: My Collection (Drop Zone) */}
+                <div className="px-6 py-4">
+                     <div className="flex items-center gap-2 mb-3">
+                         <StarIcon className="w-3 h-3 dark:text-yellow-500 text-yellow-600" filled />
+                         <span className="text-[10px] uppercase tracking-widest dark:text-white/50 text-black/50">My Deck</span>
+                     </div>
+                     
+                     <div 
+                        onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                        onDragLeave={() => setIsDragOver(false)}
+                        onDrop={handleDrop}
+                        className={`
+                            min-h-[100px] rounded-xl border-2 border-dashed transition-all duration-300 flex flex-col gap-2 p-2
+                            ${isDragOver 
+                                ? 'dark:border-white/40 dark:bg-white/10 border-black/30 bg-black/5 scale-[1.02]' 
+                                : 'dark:border-white/5 dark:bg-black/20 border-black/5 bg-gray-50'
+                            }
+                        `}
+                     >
+                        {favorites.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+                                <span className="text-xs dark:text-white/30 text-black/30 mb-1">Drag Echoes Here</span>
+                                <span className="text-[10px] dark:text-white/20 text-black/20">to build your collection</span>
+                            </div>
+                        ) : (
+                            favorites.map((card, idx) => (
+                                <div key={`fav-${card.timestamp}-${idx}`} className="relative group flex items-center justify-between p-3 rounded-lg dark:bg-white/5 bg-white border dark:border-white/5 border-black/5">
+                                    <span className="text-xs font-serif dark:text-white/80 text-gray-800 truncate flex-1">{card.title}</span>
+                                    <button 
+                                        onClick={() => card.timestamp && onRemoveFromFavorites(card.timestamp)}
+                                        className="p-1.5 rounded-full dark:hover:bg-red-500/20 hover:bg-red-100 text-transparent group-hover:dark:text-red-400 group-hover:text-red-500 transition-colors"
+                                    >
+                                        <TrashIcon className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                     </div>
+                </div>
+
                 {/* Section: History Header */}
-                <div className="px-6 py-4 flex items-center gap-3">
+                <div className="px-6 py-2 flex items-center gap-3">
                     <div className="h-[1px] flex-1 dark:bg-white/5 bg-black/5"></div>
                     <span className="text-[10px] uppercase tracking-widest dark:text-white/30 text-black/30">Recent Echoes</span>
                     <div className="h-[1px] flex-1 dark:bg-white/5 bg-black/5"></div>
                 </div>
 
-                {/* Section: History List */}
+                {/* Section: History List (Draggable) */}
                 <div className="px-6 pb-6 space-y-4">
                     {history.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 dark:text-white/30 text-black/30 text-sm border border-dashed dark:border-white/5 border-black/10 rounded-xl">
@@ -86,24 +154,34 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({ isOpen, onClose, o
                         </div>
                     ) : (
                         history.slice().reverse().map((card, idx) => (
-                            <div key={card.timestamp || idx} className="group relative rounded-xl p-5 border transition-all duration-300
+                            <div 
+                                key={card.timestamp || idx} 
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, card)}
+                                className="group relative rounded-xl p-5 border transition-all duration-300 cursor-grab active:cursor-grabbing
                                 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-white/20
                                 bg-white/50 border-black/5 hover:bg-white hover:border-black/10 hover:shadow-sm
+                                hover:-translate-y-1 hover:shadow-lg
                             ">
-                            <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-serif dark:text-white/90 text-gray-900 font-medium">{card.title}</h3>
-                                    <span className="text-[10px] uppercase dark:text-white/30 text-black/40 border dark:border-white/10 border-black/10 px-1.5 py-0.5 rounded">
-                                        Lvl {card.intensity}
-                                    </span>
-                            </div>
-                            <p className="text-sm dark:text-white/60 text-gray-600 leading-relaxed dark:group-hover:text-white/80 group-hover:text-gray-900 transition-colors line-clamp-2">
-                                {card.question}
-                            </p>
-                            <div className="mt-3 flex gap-2 overflow-hidden">
-                                    {card.tags.map((t, i) => (
-                                        <span key={i} className="text-[10px] dark:text-white/30 text-gray-400">#{t}</span>
-                                    ))}
-                            </div>
+                                <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-serif dark:text-white/90 text-gray-900 font-medium">{card.title}</h3>
+                                        <span className="text-[10px] uppercase dark:text-white/30 text-black/40 border dark:border-white/10 border-black/10 px-1.5 py-0.5 rounded">
+                                            Lvl {card.intensity}
+                                        </span>
+                                </div>
+                                <p className="text-sm dark:text-white/60 text-gray-600 leading-relaxed dark:group-hover:text-white/80 group-hover:text-gray-900 transition-colors line-clamp-2">
+                                    {card.question}
+                                </p>
+                                <div className="mt-3 flex gap-2 overflow-hidden">
+                                        {card.tags.map((t, i) => (
+                                            <span key={i} className="text-[10px] dark:text-white/30 text-gray-400">#{t}</span>
+                                        ))}
+                                </div>
+                                
+                                {/* Drag Indicator */}
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="w-1.5 h-1.5 rounded-full dark:bg-white/20 bg-black/20"></div>
+                                </div>
                             </div>
                         ))
                     )}
