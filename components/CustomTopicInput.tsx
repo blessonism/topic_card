@@ -12,7 +12,7 @@ const IntensitySelector: React.FC<{ value: number; onChange: (val: number) => vo
     return (
         <div className="flex flex-col items-center gap-1.5">
             <span className="text-[9px] uppercase tracking-[0.2em] dark:text-white/30 text-black/30">Intensity</span>
-            <div className="flex gap-1 items-center justify-center px-2 py-1 dark:bg-black/20 bg-black/5 rounded-full border dark:border-white/5 border-black/5 transition-all duration-300 hover:dark:border-white/20 hover:border-black/10">
+            <div className="flex gap-1.5 items-center justify-center px-4 py-2 dark:bg-black/20 bg-black/5 rounded-full border dark:border-white/5 border-black/5 transition-all duration-300 hover:dark:border-white/20 hover:border-black/10">
                 {[1, 2, 3, 4, 5].map((i) => (
                     <button
                         key={i}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TopicCardData } from '../types';
-import { XIcon, SparklesIcon, PenIcon, StarIcon, TrashIcon } from './Icons';
+import { XIcon, SparklesIcon, PenIcon, StarIcon, TrashIcon, ChevronDownIcon, GripVerticalIcon, LayersIcon } from './Icons';
 
 interface HistoryDrawerProps {
   isOpen: boolean;
@@ -12,13 +12,141 @@ interface HistoryDrawerProps {
   onRemoveFromFavorites: (timestamp: number) => void;
 }
 
+interface DrawerCardProps {
+    card: TopicCardData;
+    isFavorite: boolean;
+    onRemove?: () => void;
+    onDragStart?: (e: React.DragEvent) => void;
+}
+
+// Sub-component for individual card items in the drawer
+const DrawerCard: React.FC<DrawerCardProps> = ({ 
+    card, 
+    isFavorite, 
+    onRemove, 
+    onDragStart 
+}) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div 
+            draggable={!isFavorite}
+            onDragStart={onDragStart}
+            className={`
+                group relative flex flex-col rounded-xl border transition-all duration-500 overflow-hidden
+                ${isFavorite 
+                    ? 'dark:bg-indigo-950/20 bg-indigo-50/40 dark:border-indigo-500/20 border-indigo-200 shadow-[0_2px_10px_rgba(99,102,241,0.05)]'
+                    : 'dark:bg-white/5 bg-white/50 border dark:border-white/5 border-black/5 hover:border-black/10 dark:hover:border-white/20 cursor-grab active:cursor-grabbing hover:shadow-md'
+                }
+            `}
+        >
+            {/* High-End Gradient Accent Line for Favorites (replacing the thick solid border) */}
+            {isFavorite && (
+                <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-indigo-500/0 via-indigo-500/50 to-indigo-500/0 opacity-60"></div>
+            )}
+            
+            {/* Header / Summary Row */}
+            <div 
+                className={`p-3 pl-4 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors ${isExpanded ? 'bg-black/5 dark:bg-white/5' : ''}`}
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                {/* Drag Grip (History only) */}
+                {!isFavorite && (
+                    <div className="text-black/20 dark:text-white/20 group-hover:text-black/40 dark:group-hover:text-white/40 transition-colors">
+                        <GripVerticalIcon className="w-4 h-4" />
+                    </div>
+                )}
+
+                <div className="flex-1 min-w-0 relative">
+                    <div className="flex items-center gap-2 mb-0.5">
+                        <h4 className={`text-sm font-serif font-medium truncate transition-colors ${
+                            isFavorite 
+                            ? 'dark:text-indigo-200 text-indigo-900 group-hover:dark:text-white group-hover:text-indigo-700' 
+                            : 'dark:text-white/90 text-gray-900'
+                        }`}>
+                            {card.title}
+                        </h4>
+                        
+                        {/* Intensity Dots - Subtler */}
+                        <div className="flex gap-0.5 opacity-50">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className={`w-0.5 h-0.5 rounded-full ${i <= (card.intensity > 3 ? 3 : card.intensity) ? 'dark:bg-white bg-black' : 'dark:bg-white/20 bg-black/10'}`} />
+                            ))}
+                        </div>
+                    </div>
+                    {/* Collapsed Preview Text */}
+                    {!isExpanded && (
+                        <p className={`text-[10px] truncate transition-colors ${isFavorite ? 'dark:text-indigo-200/40 text-indigo-900/40' : 'dark:text-white/40 text-black/40'}`}>
+                            {card.question}
+                        </p>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                    {/* Expand/Collapse Toggle */}
+                    <div className={`p-1 rounded-full transition-all duration-300 ${isExpanded ? 'rotate-180 dark:bg-white/10 bg-black/5' : 'rotate-0'}`}>
+                        <ChevronDownIcon className={`w-3 h-3 ${isFavorite ? 'dark:text-indigo-300/50 text-indigo-400' : 'dark:text-white/30 text-black/30'}`} />
+                    </div>
+                    
+                    {/* Remove Action (Favorites only) */}
+                    {isFavorite && onRemove && (
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                            className="p-1.5 ml-1 rounded-full hover:bg-red-500/10 text-transparent hover:text-red-500 transition-colors group/trash"
+                            title="Remove from deck"
+                        >
+                            <TrashIcon className="w-3.5 h-3.5 dark:text-indigo-300/20 text-indigo-900/20 group-hover/trash:text-red-500 transition-colors" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Expanded Content (Accordion) */}
+            <div className={`grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                <div className="overflow-hidden">
+                    <div className="px-4 pb-4 pt-2">
+                        {/* Divider */}
+                        <div className={`h-[1px] w-12 mb-3 ${isFavorite ? 'dark:bg-indigo-500/20 bg-indigo-500/10' : 'dark:bg-white/10 bg-black/5'}`}></div>
+                        
+                        <p className={`text-xs italic mb-2 font-serif ${isFavorite ? 'dark:text-indigo-100/60 text-indigo-900/60' : 'dark:text-white/50 text-gray-500'}`}>
+                            "{card.description}"
+                        </p>
+                        
+                        <p className={`text-sm leading-relaxed mb-4 ${isFavorite ? 'dark:text-indigo-50 text-indigo-950' : 'dark:text-white/90 text-gray-800'}`}>
+                            {card.question}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1.5 opacity-80">
+                            {card.tags.map((tag, idx) => (
+                                <span key={idx} className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                    isFavorite 
+                                    ? 'dark:bg-indigo-500/10 bg-indigo-500/5 dark:border-indigo-500/20 border-indigo-200 dark:text-indigo-200 text-indigo-800'
+                                    : 'dark:bg-white/5 bg-black/5 dark:border-white/5 border-black/5 dark:text-white/50 text-black/50'
+                                }`}>
+                                    {tag}
+                                </span>
+                            ))}
+                            <span className={`text-[9px] uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                isFavorite 
+                                    ? 'dark:bg-indigo-500/5 bg-indigo-500/5 dark:border-indigo-500/10 border-indigo-100 dark:text-indigo-200/50 text-indigo-800/50'
+                                    : 'dark:bg-white/5 bg-black/5 dark:border-white/5 border-black/5 dark:text-white/30 text-black/30'
+                                }`}>
+                                {card.isUserGenerated ? 'Handcrafted' : 'Oracle'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({ 
     isOpen, onClose, onOpenCustomCreator, history, favorites, onAddToFavorites, onRemoveFromFavorites 
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const handleDragStart = (e: React.DragEvent, card: TopicCardData) => {
-    // We send the JSON string of the card data
     e.dataTransfer.setData("application/json", JSON.stringify(card));
     e.dataTransfer.effectAllowed = "copy";
   };
@@ -42,7 +170,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
     <>
       {/* Backdrop */}
       <div 
-        className={`fixed inset-0 bg-black/60 dark:bg-black/60 bg-gray-900/20 backdrop-blur-sm z-40 transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-black/60 dark:bg-black/80 bg-gray-900/30 backdrop-blur-sm z-40 transition-opacity duration-500 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={onClose}
       />
       
@@ -56,7 +184,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
       >
         <div className="flex flex-col h-full relative overflow-hidden">
             {/* Ambient Background in Drawer */}
-            <div className="absolute top-0 right-0 w-64 h-64 dark:bg-purple-900/10 bg-blue-100/40 rounded-full blur-[80px] pointer-events-none transition-colors duration-500"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 dark:bg-indigo-900/10 bg-blue-100/40 rounded-full blur-[80px] pointer-events-none transition-colors duration-500"></div>
 
             {/* Header */}
             <div className="p-6 border-b dark:border-white/5 border-black/5 flex justify-between items-center relative z-10">
@@ -99,11 +227,18 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                     </button>
                 </div>
 
-                {/* Section: My Collection (Drop Zone) */}
+                {/* Section: My Deck (Drop Zone) */}
                 <div className="px-6 py-4">
-                     <div className="flex items-center gap-2 mb-3">
-                         <StarIcon className="w-3 h-3 dark:text-yellow-500 text-yellow-600" filled />
-                         <span className="text-[10px] uppercase tracking-widest dark:text-white/50 text-black/50">My Deck</span>
+                     <div className="flex items-center justify-between mb-3">
+                         <div className="flex items-center gap-2">
+                             <StarIcon className="w-3 h-3 dark:text-indigo-400 text-indigo-500" filled />
+                             <span className="text-[10px] uppercase tracking-widest dark:text-white/50 text-black/50">My Collection ({favorites.length})</span>
+                         </div>
+                         {favorites.length > 0 && (
+                            <span className="text-[9px] dark:text-white/20 text-black/20 italic">
+                                Active Deck
+                            </span>
+                         )}
                      </div>
                      
                      <div 
@@ -111,29 +246,33 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                         onDragLeave={() => setIsDragOver(false)}
                         onDrop={handleDrop}
                         className={`
-                            min-h-[100px] rounded-xl border-2 border-dashed transition-all duration-300 flex flex-col gap-2 p-2
+                            min-h-[140px] rounded-2xl border transition-all duration-300 p-2 flex flex-col gap-2 relative overflow-hidden
                             ${isDragOver 
-                                ? 'dark:border-white/40 dark:bg-white/10 border-black/30 bg-black/5 scale-[1.02]' 
-                                : 'dark:border-white/5 dark:bg-black/20 border-black/5 bg-gray-50'
+                                ? 'dark:border-indigo-500/50 border-indigo-400/50 dark:bg-indigo-900/20 bg-indigo-50/50 scale-[1.01] shadow-[0_0_20px_rgba(99,102,241,0.15)]' 
+                                : favorites.length > 0 
+                                    ? 'dark:border-white/5 border-black/5 dark:bg-white/5 bg-gray-50/50' 
+                                    : 'dark:border-white/5 border-black/5 border-dashed dark:bg-transparent bg-transparent'
                             }
                         `}
                      >
                         {favorites.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                                <span className="text-xs dark:text-white/30 text-black/30 mb-1">Drag Echoes Here</span>
-                                <span className="text-[10px] dark:text-white/20 text-black/20">to build your collection</span>
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-3 opacity-60">
+                                <div className={`p-4 rounded-full dark:bg-white/5 bg-black/5 transition-transform duration-500 ${isDragOver ? 'scale-110 rotate-12' : ''}`}>
+                                    <LayersIcon className="w-6 h-6 dark:text-white/20 text-black/20" />
+                                </div>
+                                <div>
+                                    <p className="text-xs dark:text-white/50 text-black/50 font-medium tracking-wide">DECK EMPTY</p>
+                                    <p className="text-[10px] dark:text-white/30 text-black/30 mt-1">Drag cards here to build your collection</p>
+                                </div>
                             </div>
                         ) : (
                             favorites.map((card, idx) => (
-                                <div key={`fav-${card.timestamp}-${idx}`} className="relative group flex items-center justify-between p-3 rounded-lg dark:bg-white/5 bg-white border dark:border-white/5 border-black/5">
-                                    <span className="text-xs font-serif dark:text-white/80 text-gray-800 truncate flex-1">{card.title}</span>
-                                    <button 
-                                        onClick={() => card.timestamp && onRemoveFromFavorites(card.timestamp)}
-                                        className="p-1.5 rounded-full dark:hover:bg-red-500/20 hover:bg-red-100 text-transparent group-hover:dark:text-red-400 group-hover:text-red-500 transition-colors"
-                                    >
-                                        <TrashIcon className="w-3 h-3" />
-                                    </button>
-                                </div>
+                                <DrawerCard 
+                                    key={`fav-${card.timestamp}-${idx}`} 
+                                    card={card} 
+                                    isFavorite={true} 
+                                    onRemove={() => card.timestamp && onRemoveFromFavorites(card.timestamp)}
+                                />
                             ))
                         )}
                      </div>
@@ -146,43 +285,20 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                     <div className="h-[1px] flex-1 dark:bg-white/5 bg-black/5"></div>
                 </div>
 
-                {/* Section: History List (Draggable) */}
-                <div className="px-6 pb-6 space-y-4">
+                {/* Section: History List */}
+                <div className="px-6 pb-6 space-y-3">
                     {history.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 dark:text-white/30 text-black/30 text-sm border border-dashed dark:border-white/5 border-black/10 rounded-xl">
-                            <p>No echoes found.</p>
+                            <p className="font-serif italic">No history yet...</p>
                         </div>
                     ) : (
                         history.slice().reverse().map((card, idx) => (
-                            <div 
-                                key={card.timestamp || idx} 
-                                draggable
+                            <DrawerCard 
+                                key={`hist-${card.timestamp}-${idx}`} 
+                                card={card} 
+                                isFavorite={false} 
                                 onDragStart={(e) => handleDragStart(e, card)}
-                                className="group relative rounded-xl p-5 border transition-all duration-300 cursor-grab active:cursor-grabbing
-                                dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10 dark:hover:border-white/20
-                                bg-white/50 border-black/5 hover:bg-white hover:border-black/10 hover:shadow-sm
-                                hover:-translate-y-1 hover:shadow-lg
-                            ">
-                                <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-serif dark:text-white/90 text-gray-900 font-medium">{card.title}</h3>
-                                        <span className="text-[10px] uppercase dark:text-white/30 text-black/40 border dark:border-white/10 border-black/10 px-1.5 py-0.5 rounded">
-                                            Lvl {card.intensity}
-                                        </span>
-                                </div>
-                                <p className="text-sm dark:text-white/60 text-gray-600 leading-relaxed dark:group-hover:text-white/80 group-hover:text-gray-900 transition-colors line-clamp-2">
-                                    {card.question}
-                                </p>
-                                <div className="mt-3 flex gap-2 overflow-hidden">
-                                        {card.tags.map((t, i) => (
-                                            <span key={i} className="text-[10px] dark:text-white/30 text-gray-400">#{t}</span>
-                                        ))}
-                                </div>
-                                
-                                {/* Drag Indicator */}
-                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <div className="w-1.5 h-1.5 rounded-full dark:bg-white/20 bg-black/20"></div>
-                                </div>
-                            </div>
+                            />
                         ))
                     )}
                 </div>
