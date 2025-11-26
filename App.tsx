@@ -197,7 +197,7 @@ const App: React.FC = () => {
                     bg-[#e6e6e6] border-black/5 origin-bottom-left
                     ${generationState.isLoading 
                         ? 'translate-y-3 scale-90 opacity-20 rotate-0' 
-                        : 'translate-y-1 scale-[0.92] dark:opacity-100 opacity-40 -rotate-2.5 -translate-x-1'
+                        : 'translate-y-2 scale-[0.92] dark:opacity-100 opacity-40 -rotate-6 -translate-x-2'
                     }
                  `}
                ></div>
@@ -209,7 +209,7 @@ const App: React.FC = () => {
                     bg-gradient-to-br from-[#fcfcfc] via-[#f5f5f7] to-[#e6e6e6] border-black/5 origin-bottom-right
                     ${generationState.isLoading 
                         ? 'translate-y-1 scale-95 opacity-50 rotate-0' 
-                        : 'translate-y-0.5 scale-[0.96] dark:opacity-100 opacity-60 rotate-1.5 translate-x-1'
+                        : 'translate-y-1 scale-[0.96] dark:opacity-100 opacity-60 rotate-3 translate-x-2'
                     }
                  `}
                >
